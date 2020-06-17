@@ -1,6 +1,7 @@
 package com.jump.utils.report.base;
 
 import com.deepoove.poi.config.ConfigureBuilder;
+import com.deepoove.poi.render.processor.Visitor;
 import com.deepoove.poi.template.MetaTemplate;
 import com.jump.common.CommonReflex;
 import com.jump.utils.report.anno.Render;
@@ -21,10 +22,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -42,18 +40,17 @@ public class ReportPaddingEngine {
         List<Field> fields = CommonReflex.getParentMember(paddingPlaceholder.getClass());
         Map<String, Integer> renderValMap = Maps.newHashMap();
         fields.forEach(field -> getFieldConsumer(paddingPlaceholder, builder, paddingMap, renderValMap, field));
-        XWPFTemplate compile = XWPFTemplate.compile(template, builder.build());
-        List<MetaTemplate> elementTemplates = compile.getElementTemplates();
-        List<ElementTemplate> collect = elementTemplates.stream().filter(x -> paddingMap.containsKey(x.getTagName())).collect(Collectors.toList());
+        Configure configure = builder.build();
+        XWPFTemplate compile = XWPFTemplate.compile(template, configure);
+        /*List<MetaTemplate> elementTemplates = compile.getElementTemplates();
+        List<MetaTemplate> collect = elementTemplates.stream().filter(x -> {
+            String variable = x.variable();
+            String tagName = variable.replace("${", "").replace("}", "");
+            return paddingMap.containsKey(tagName);
+        }).collect(Collectors.toList());
         elementTemplates.clear();
-        collect.sort((o1, o2) -> {
-            String tagName1 = o1.getTagName();
-            String tagName2 = o2.getTagName();
-            Integer val1 = renderValMap.get(tagName1);
-            Integer val2 = renderValMap.get(tagName2);
-            return val1 - val2;
-        });
-        elementTemplates.addAll(collect);
+        collect.sort(Comparator.comparingInt(o -> renderValMap.get(o.variable())));
+        elementTemplates.addAll(collect);*/
         compile.render(paddingMap);
 
         FileOutputStream out = new FileOutputStream(outFile);

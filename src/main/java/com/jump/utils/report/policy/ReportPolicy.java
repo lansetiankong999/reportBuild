@@ -1,5 +1,7 @@
 package com.jump.utils.report.policy;
 
+import com.deepoove.poi.resolver.Resolver;
+import com.deepoove.poi.resolver.TemplateResolver;
 import com.jump.utils.report.RenderUtils;
 import com.jump.utils.report.anno.Render;
 import com.jump.utils.report.handler.RenderHandler;
@@ -12,16 +14,18 @@ import com.deepoove.poi.template.ElementTemplate;
 import com.deepoove.poi.template.run.RunTemplate;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 
+import java.lang.reflect.Field;
+import java.util.regex.Pattern;
+
 /**
  * @author Jump
  * @date 2020/3/9 10:30
  */
-@SuppressWarnings("all")
-public class ReportPolicy<T> extends AbstractRenderPolicy {
+public class ReportPolicy<T> extends AbstractRenderPolicy<T> {
 
-    private RenderMeta renderMeta;
+    private final RenderMeta<T> renderMeta;
 
-    public ReportPolicy(RenderMeta renderMeta) {
+    public ReportPolicy(RenderMeta<T> renderMeta) {
         this.renderMeta = renderMeta;
     }
 
@@ -36,7 +40,7 @@ public class ReportPolicy<T> extends AbstractRenderPolicy {
         RunTemplate runTemplate = (RunTemplate) eleTemplate;
 
         // type safe
-        T model = null;
+        T model;
         try {
             model = (T) data;
         } catch (ClassCastException e) {
@@ -62,10 +66,12 @@ public class ReportPolicy<T> extends AbstractRenderPolicy {
 
     @Override
     public void doRender(RenderContext renderContext) throws Exception {
-        //renderMeta.setElementTemplate(renderContext.getEleTemplate());
         renderMeta.setRun(renderContext.getRun());
         renderMeta.setXwpfTemplate(renderContext.getTemplate());
-        RenderUtils.initRenderMeta(renderMeta);
+        renderMeta.setConfig(renderContext.getConfig());
+        TemplateResolver resolver = (TemplateResolver) renderContext.getTemplate().getResolver();
+        renderMeta.setTemplatePattern(resolver.getTemplatePattern());
+        renderMeta.setGramerPattern(resolver.getGramerPattern());
         Render render = renderMeta.getRender();
         XWPFRun run = renderContext.getRun();
         try {

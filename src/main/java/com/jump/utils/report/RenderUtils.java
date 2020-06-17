@@ -10,7 +10,6 @@ import com.jump.utils.report.meta.RenderMeta;
 import com.jump.utils.report.style.RunStyle;
 import com.deepoove.poi.XWPFTemplate;
 import com.deepoove.poi.config.Configure;
-import com.deepoove.poi.template.run.RunTemplate;
 import com.deepoove.poi.util.StyleUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -49,7 +48,6 @@ public class RenderUtils {
         target.getCTR().setRPr(source.getCTR().getRPr());
         // 设置文本
         target.setText(source.text());
-
     }
 
     public static void initRenderMeta(RenderMeta renderMeta) {
@@ -65,12 +63,11 @@ public class RenderUtils {
             Field templatePatternField = templateResolver.getClass().getDeclaredField("templatePattern");
             Field gramerPatternField = templateResolver.getClass().getDeclaredField("gramerPattern");
             configField.setAccessible(true);
-            Configure configure = (Configure) configField.get(templateResolver);
+            //Configure configure = (Configure) configField.get(templateResolver);
             templatePatternField.setAccessible(true);
             templatePattern = (Pattern) templatePatternField.get(templateResolver);
             gramerPatternField.setAccessible(true);
             gramerPattern = (Pattern) gramerPatternField.get(templateResolver);
-            renderMeta.setConfig(configure);
             renderMeta.setTemplatePattern(templatePattern);
             renderMeta.setGramerPattern(gramerPattern);
         } catch (Exception e) {
