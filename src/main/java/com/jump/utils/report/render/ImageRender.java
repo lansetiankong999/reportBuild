@@ -1,11 +1,10 @@
 package com.jump.utils.report.render;
 
+import com.deepoove.poi.data.FilePictureRenderData;
+import com.google.common.collect.Lists;
 import com.jump.utils.report.RenderUtils;
 import com.jump.utils.report.base.BaseRender;
 import com.jump.utils.report.meta.RenderMeta;
-import com.deepoove.poi.data.PictureRenderData;
-import com.deepoove.poi.template.run.RunTemplate;
-import com.google.common.collect.Lists;
 import org.apache.poi.xwpf.usermodel.*;
 import org.apache.xmlbeans.XmlCursor;
 import org.openxmlformats.schemas.drawingml.x2006.main.CTNonVisualDrawingProps;
@@ -45,7 +44,8 @@ public class ImageRender implements BaseRender {
             XWPFParagraph tmpParagraph = iBody.insertNewParagraph(xmlCursor);
             RenderUtils.copyParagraph(tmpParagraph, paragraph);
             xmlCursor = paragraph.getCTP().newCursor();
-            PictureRenderData picture = (PictureRenderData) o;
+            String path = o.toString();
+            FilePictureRenderData picture = new FilePictureRenderData(path);
             List<XWPFRun> runs = new ArrayList<>(tmpParagraph.getRuns());
             runs.forEach(x -> {
                 String text = x.getText(0);
@@ -54,19 +54,12 @@ public class ImageRender implements BaseRender {
                     x.setText("", 0);
                     InputStream ins = null;
                     try {
-                        int suggestFileType = RenderUtils.suggestFileType(picture.getPath());
-                        File pictureFile = new File(picture.getPath());
+                        int suggestFileType = RenderUtils.suggestFileType(path);
+                        File pictureFile = new File(path);
                         BufferedImage bi = ImageIO.read(pictureFile);
-                        int width = picture.getWidth();
-                        int height = picture.getHeight();
-                        ins = null == picture.getData() ? new FileInputStream(pictureFile) : new ByteArrayInputStream(picture.getData());
-                        if (0 == width) {
-                            width = 750;
-                        }
-                        if (0 == height) {
-                            double d = (double) width / bi.getWidth();
-                            height = (int) (bi.getHeight() * d);
-                        }
+                        int width = bi.getWidth();
+                        int height = bi.getHeight();
+                        ins = null == picture.readPictureData() ? new FileInputStream(pictureFile) : new ByteArrayInputStream(picture.readPictureData());
                         x.addPicture(ins, suggestFileType, pictureFile.getName(), width * RenderUtils.EMU, height * RenderUtils.EMU);
                         List<CTDrawing> drawingList = x.getCTR().getDrawingList();
                         drawingList.forEach(y -> {

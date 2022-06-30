@@ -10,11 +10,11 @@ import java.util.Map;
  * @date 2020/3/9 14:09
  */
 public class EnBizEnumProperty extends AbstractBizEnumProperty {
-    private static Map<String,Map> propertyMap = Maps.newHashMap();
-    private static Map<String,List<Map<String,String>>> propertiesList = Maps.newHashMap();
+    private static Map<String, Map<String, Object>> propertyMap = Maps.newHashMap();
+    private static Map<String, List<Map<String, String>>> propertiesList = Maps.newHashMap();
 
     @Override
-    Map<String, Map> getPropertiesMap() {
+    Map<String, Map<String, Object>> getPropertiesMap() {
         return propertyMap;
     }
 

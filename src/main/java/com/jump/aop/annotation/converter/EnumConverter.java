@@ -22,7 +22,7 @@ public @interface EnumConverter {
 
     String formatFieldName() default "";
 
-    String value() default "" ;
+    String value() default "";
 
     String formatter() default "";
 }

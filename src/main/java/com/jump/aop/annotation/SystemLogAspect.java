@@ -7,18 +7,18 @@ import java.lang.annotation.Target;
 
 /**
  * 自定义系统日志切面注解
- * @author Jump
  *
+ * @author Jump
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface SystemLogAspect {
 
-	String value();
+    String value();
 
-	boolean isSaveParams() default true;
+    boolean isSaveParams() default true;
 
-	boolean isSaveResult() default false;
+    boolean isSaveResult() default false;
 
-	boolean isRecordError() default false;
+    boolean isRecordError() default false;
 }

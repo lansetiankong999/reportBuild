@@ -20,28 +20,30 @@ public class BizEnumProperty {
     private static TraBizEnumProperty traEnumProperty;
     private static EnBizEnumProperty enEnumProperty;
 
-    public static Map getBizPropertys(String mapKey, String locale) {
-        Map properties = null;
+    public static Map<String, Object> getBizProperty(String mapKey, String locale) {
+        Map<String, Object> properties = null;
         boolean b = StringUtils.isBlank(locale) || CHINESE.equals(locale);
-        if(b && cnEnumProperty != null){
-            properties =  cnEnumProperty.getBizPropertys(mapKey);
-        }else if(TRADITIONAL_CHINESE.equals(locale) && traEnumProperty != null){
-            properties =  traEnumProperty.getBizPropertys(mapKey);
-        }else if(ENGLISH.equals(locale) && enEnumProperty != null){
-            properties =  enEnumProperty.getBizPropertys(mapKey);
-        }else if(cnEnumProperty != null){
-            properties =  cnEnumProperty.getBizPropertys(mapKey);
+        if (b && cnEnumProperty != null) {
+            properties = cnEnumProperty.getBizProperty(mapKey);
+        } else if (TRADITIONAL_CHINESE.equals(locale) && traEnumProperty != null) {
+            properties = traEnumProperty.getBizProperty(mapKey);
+        } else if (ENGLISH.equals(locale) && enEnumProperty != null) {
+            properties = enEnumProperty.getBizProperty(mapKey);
+        } else if (cnEnumProperty != null) {
+            properties = cnEnumProperty.getBizProperty(mapKey);
         }
         return properties;
     }
 
-    public  void setCnEnumProperty(CnBizEnumProperty cnEnumProperty) {
+    public void setCnEnumProperty(CnBizEnumProperty cnEnumProperty) {
         BizEnumProperty.cnEnumProperty = cnEnumProperty;
     }
-    public  void setTraEnumProperty(TraBizEnumProperty traEnumProperty) {
+
+    public void setTraEnumProperty(TraBizEnumProperty traEnumProperty) {
         BizEnumProperty.traEnumProperty = traEnumProperty;
     }
-    public  void setEnEnumProperty(EnBizEnumProperty enEnumProperty) {
+
+    public void setEnEnumProperty(EnBizEnumProperty enEnumProperty) {
         BizEnumProperty.enEnumProperty = enEnumProperty;
     }
 }

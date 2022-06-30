@@ -46,7 +46,7 @@ public enum CommonParserDef {
 
     private final Function function;
 
-    private CommonParserDef(Function function) {
+    CommonParserDef(Function function) {
         this.function = function;
     }
 

@@ -5,21 +5,25 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.3.1.RELEASE</version>
+        <version>2.6.6</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
     <groupId>com.jump</groupId>
     <artifactId>report</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <description>project for Spring Boot</description>
 
     <properties>
         <java.version>1.8</java.version>
-        <poi.version>4.1.2</poi.version>
-        <poi-tl.version>1.7.3</poi-tl.version>
-        <spring.boot.mybaties.version>2.0.1</spring.boot.mybaties.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <poi.version>5.2.2</poi.version>
+        <poi-tl.version>1.12.0</poi-tl.version>
+        <spring.boot.mybaties.version>2.0.1</spring.boot.mybaties.version>
+        <poi.ooxl.schemas.version>4.1.2</poi.ooxl.schemas.version>
+        <jsoup.version>1.14.3</jsoup.version>
+        <commons.beanutils.version>1.9.4</commons.beanutils.version>
+        <commons.text.version>1.9</commons.text.version>
     </properties>
 
     <dependencies>
@@ -72,7 +76,7 @@
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml-schemas</artifactId>
-            <version>${poi.version}</version>
+            <version>${poi.ooxl.schemas.version}</version>
         </dependency>
 
         <dependency>
@@ -90,16 +94,21 @@
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.13.1</version>
+            <version>${jsoup.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/commons-beanutils/commons-beanutils -->
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
-            <version>1.9.4</version>
+            <version>${commons.beanutils.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+            <version>${commons.text.version}</version>
+        </dependency>
     </dependencies>
 
 

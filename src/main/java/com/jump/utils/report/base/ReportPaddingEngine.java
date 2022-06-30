@@ -1,19 +1,18 @@
 package com.jump.utils.report.base;
 
+import com.deepoove.poi.XWPFTemplate;
+import com.deepoove.poi.config.Configure;
 import com.deepoove.poi.config.ConfigureBuilder;
-import com.deepoove.poi.render.processor.Visitor;
 import com.deepoove.poi.template.MetaTemplate;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jump.common.CommonReflex;
 import com.jump.utils.report.anno.Render;
 import com.jump.utils.report.handler.RenderHandler;
 import com.jump.utils.report.meta.RenderMeta;
 import com.jump.utils.report.policy.ReportPolicy;
-import com.deepoove.poi.XWPFTemplate;
-import com.deepoove.poi.config.Configure;
-import com.deepoove.poi.template.ElementTemplate;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +21,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 
@@ -34,7 +36,7 @@ public class ReportPaddingEngine {
     private static final Logger logger = LoggerFactory.getLogger(ReportPaddingEngine.class);
 
     public static void run(BasePaddingPlaceholder paddingPlaceholder, File template, File outFile) throws IOException {
-        ConfigureBuilder builder = Configure.newBuilder();
+        ConfigureBuilder builder = Configure.builder();
         Map<String, Object> paddingMap = Maps.newHashMap();
         builder.buildGramer("${", "}");
         List<Field> fields = CommonReflex.getParentMember(paddingPlaceholder.getClass());
@@ -42,15 +44,15 @@ public class ReportPaddingEngine {
         fields.forEach(field -> getFieldConsumer(paddingPlaceholder, builder, paddingMap, renderValMap, field));
         Configure configure = builder.build();
         XWPFTemplate compile = XWPFTemplate.compile(template, configure);
-        /*List<MetaTemplate> elementTemplates = compile.getElementTemplates();
+        List<MetaTemplate> elementTemplates = compile.getElementTemplates();
         List<MetaTemplate> collect = elementTemplates.stream().filter(x -> {
             String variable = x.variable();
-            String tagName = variable.replace("${", "").replace("}", "");
+            String tagName = variable.replace("${", StringUtils.EMPTY).replace("}", StringUtils.EMPTY);
             return paddingMap.containsKey(tagName);
         }).collect(Collectors.toList());
         elementTemplates.clear();
-        collect.sort(Comparator.comparingInt(o -> renderValMap.get(o.variable())));
-        elementTemplates.addAll(collect);*/
+        collect.sort(Comparator.comparingInt(o -> renderValMap.get(o.variable().replace("${", StringUtils.EMPTY).replace("}", StringUtils.EMPTY))));
+        elementTemplates.addAll(collect);
         compile.render(paddingMap);
 
         FileOutputStream out = new FileOutputStream(outFile);
@@ -75,7 +77,7 @@ public class ReportPaddingEngine {
                     String[] anchorArr = render.anchor();
                     Set<String> anchorSet = Sets.newHashSet(anchorArr);
                     for (String anchor : anchorSet) {
-                        builder.customPolicy(anchor, new ReportPolicy(renderMeta));
+                        builder.bind(anchor, new ReportPolicy<>(renderMeta));
                         paddingMap.put(anchor, data);
                         renderValMap.put(anchor, render.value());
                     }
@@ -96,14 +98,14 @@ public class ReportPaddingEngine {
                                 String[] anchorArr = fieldRender.anchor();
                                 Set<String> anchorSet = Sets.newHashSet(anchorArr);
                                 for (String anchor : anchorSet) {
-                                    builder.customPolicy(anchor, new ReportPolicy(renderMeta));
+                                    builder.bind(anchor, new ReportPolicy<>(renderMeta));
                                     renderValMap.put(anchor, fieldRender.value());
                                     paddingMap.put(anchor, fieldData);
                                 }
                             } else {
                                 RenderMeta<Object> renderMeta = new RenderMeta<>();
                                 renderMeta.setData(fieldData);
-                                builder.customPolicy(formFieldName, new ReportPolicy(renderMeta));
+                                builder.bind(formFieldName, new ReportPolicy<>(renderMeta));
                                 paddingMap.put(formFieldName, fieldData);
                                 renderValMap.put(formFieldName, Integer.MAX_VALUE);
                             }
@@ -115,7 +117,7 @@ public class ReportPaddingEngine {
             } else {
                 RenderMeta<Object> renderMeta = new RenderMeta<>();
                 renderMeta.setData(data);
-                builder.customPolicy(fieldName, new ReportPolicy(renderMeta));
+                builder.bind(fieldName, new ReportPolicy<>(renderMeta));
                 renderValMap.put(fieldName, Integer.MAX_VALUE);
                 paddingMap.put(fieldName, data);
             }

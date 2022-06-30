@@ -16,10 +16,9 @@ import java.util.Set;
  */
 public class CommonReflex {
 
-    private static final Logger logger = LoggerFactory.getLogger(CommonReflex.class);
-
     /**
      * 反射时获取所有父类成员
+     *
      * @param tempClass tempClass
      * @return List<Field>
      */

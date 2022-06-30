@@ -22,7 +22,7 @@ public @interface DateConverter {
 
     String formatFieldName() default "";
 
-    String value() ;
+    String value();
 
     String formatter() default "";
 }

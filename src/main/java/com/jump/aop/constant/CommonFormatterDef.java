@@ -50,13 +50,13 @@ public enum CommonFormatterDef {
         return r;
     });
 
-    private final Function function;
+    private final Function<Object, Object> function;
 
-    CommonFormatterDef(Function function) {
+    CommonFormatterDef(Function<Object, Object> function) {
         this.function = function;
     }
 
-    public Function getFunction() {
+    public Function<Object, Object> getFunction() {
         return function;
     }
 }

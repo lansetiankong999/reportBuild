@@ -1,14 +1,12 @@
 package com.jump.utils.report.render;
 
-import com.deepoove.poi.resolver.DefaultRunTemplateFactory;
+import com.deepoove.poi.XWPFTemplate;
+import com.google.common.collect.Lists;
 import com.jump.utils.report.RenderUtils;
 import com.jump.utils.report.anno.Render;
 import com.jump.utils.report.base.BaseRender;
 import com.jump.utils.report.handler.RenderHandler;
 import com.jump.utils.report.meta.RenderMeta;
-import com.deepoove.poi.XWPFTemplate;
-import com.deepoove.poi.template.run.RunTemplate;
-import com.google.common.collect.Lists;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -50,7 +48,7 @@ public class VerticalTableRender implements BaseRender {
         }
         int dataSize = dataList.size();
         XWPFTemplate xwpfTemplate = renderMeta.getXwpfTemplate();
-        XWPFTable xwpfTable = RenderUtils.getxwpftable(xwpfTemplate, renderMeta.getRun());
+        XWPFTable xwpfTable = RenderUtils.getxwpfTable(xwpfTemplate, renderMeta.getRun());
         XWPFParagraph paragraph = (XWPFParagraph) renderMeta.getRun().getParent();
         XWPFTableCell tableCell = (XWPFTableCell) paragraph.getBody();
         int placeholderIndex = RenderUtils.getTargetColIndex(xwpfTable, tableCell);
@@ -102,15 +100,11 @@ public class VerticalTableRender implements BaseRender {
                     anchorRenderMeta.setRender(x.getRight());
                     anchorRenderMeta.setXwpfTemplate(xwpfTemplate);
                     anchorRenderMeta.setConfig(renderMeta.getConfig());
-                    //String tag = gramerPattern.matcher(renderEffectRun.getText(0)).replaceAll("").trim();
-                    //DefaultRunTemplateFactory defaultRunTemplateFactory = new DefaultRunTemplateFactory(renderMeta.getConfig());
-                    //RunTemplate anchorRunTemplate = defaultRunTemplateFactory.createRunTemplate(tag, renderEffectRun);
-                    //anchorRenderMeta.setRunTemplate(anchorRunTemplate);
                     anchorRenderMeta.setRun(renderEffectRun);
                     try {
-                        Field anchorfield = x.getLeft();
-                        anchorfield.setAccessible(true);
-                        anchorRenderMeta.setData(anchorfield.get(rowData));
+                        Field anchorField = x.getLeft();
+                        anchorField.setAccessible(true);
+                        anchorRenderMeta.setData(anchorField.get(rowData));
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
                         logger.error("error", e);
@@ -121,14 +115,7 @@ public class VerticalTableRender implements BaseRender {
                     RenderHandler.handle(anchorRenderMeta);
                 });
 
-                //未使用render的段落
-                for (XWPFParagraph copyParagraph : paragraphs) {
-                    List<XWPFRun> copyRuns = copyParagraph.getRuns();
-                    List<XWPFRun> runs = new ArrayList<>(copyRuns);
-                    for (XWPFRun x : runs) {
-                        RenderUtils.handlePlaceholder(x, rowData, templatePattern, gramerPattern);
-                    }
-                }
+                GroupRender.readerRun(templatePattern, gramerPattern, rowData, paragraphs);
 
             }
 

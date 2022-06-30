@@ -1,7 +1,8 @@
 package com.jump.utils.report.render;
 
-import com.deepoove.poi.resolver.DefaultRunTemplateFactory;
-import com.deepoove.poi.resolver.TemplateResolver;
+import com.deepoove.poi.XWPFTemplate;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jump.pojo.placeholder.BaseMeta;
 import com.jump.utils.report.RenderUtils;
 import com.jump.utils.report.anno.Render;
@@ -9,10 +10,6 @@ import com.jump.utils.report.base.BaseRender;
 import com.jump.utils.report.handler.RenderHandler;
 import com.jump.utils.report.meta.RenderMeta;
 import com.jump.utils.report.style.RunStyle;
-import com.deepoove.poi.XWPFTemplate;
-import com.deepoove.poi.template.run.RunTemplate;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -41,6 +38,47 @@ public class GroupRender implements BaseRender {
 
     private final static Logger logger = LoggerFactory.getLogger(GroupRender.class);
 
+    static void readerRun(Pattern templatePattern, Pattern gramerPattern, Object rowData, List<XWPFParagraph> copyParagraphList) {
+        for (XWPFParagraph copyParagraph : copyParagraphList) {
+            List<XWPFRun> copyRuns = copyParagraph.getRuns();
+            List<XWPFRun> runs = new ArrayList<>(copyRuns);
+            for (XWPFRun x : runs) {
+                RenderUtils.handlePlaceholder(x, rowData, templatePattern, gramerPattern);
+            }
+        }
+    }
+
+    static void renderMetaValue(RenderMeta renderMeta, Pattern templatePattern, Pattern gramerPattern, XWPFTemplate xwpfTemplate, List<Pair<Field, Render>> allRenderAnno, Object rowData, List<XWPFParagraph> copyParagraphList) {
+        allRenderAnno.forEach(x -> {
+            Render right = x.getRight();
+            XWPFRun renderEffectRun = RenderUtils.findRenderEffectRun(right, copyParagraphList, gramerPattern);
+            if (renderEffectRun == null) {
+                return;
+            }
+            List<XWPFParagraph> renderEffectParagraph = RenderUtils.findRenderEffectParagraph(right, copyParagraphList, gramerPattern);
+            RenderMeta anchorRenderMeta = new RenderMeta();
+            anchorRenderMeta.setTemplatePattern(templatePattern);
+            anchorRenderMeta.setGramerPattern(gramerPattern);
+            anchorRenderMeta.setRender(x.getRight());
+            anchorRenderMeta.setXwpfTemplate(xwpfTemplate);
+            anchorRenderMeta.setConfig(renderMeta.getConfig());
+            anchorRenderMeta.setRun(anchorRenderMeta.getRun());
+            try {
+                Field anchorfield = x.getLeft();
+                anchorfield.setAccessible(true);
+                anchorRenderMeta.setData(anchorfield.get(rowData));
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+                logger.error("error", e);
+            }
+            if (right.value() != RenderHandler.FILED) {
+                copyParagraphList.removeAll(renderEffectParagraph);
+            }
+            RenderHandler.handle(anchorRenderMeta);
+
+        });
+    }
+
     @Override
     public void execute(RenderMeta renderMeta) {
         Pattern templatePattern = renderMeta.getTemplatePattern();
@@ -49,29 +87,9 @@ public class GroupRender implements BaseRender {
         String defVal = render.defVal();
         String[] lastAnchor = render.lastAnchor();
         HashSet<String> lastaAnchorSet = Sets.newHashSet(lastAnchor);
-        Object data = renderMeta.getData();
-        List dataList = Lists.newArrayList();
-
-        if (data instanceof List) {
-            dataList = (List) data;
-        } else if (data != null) {
-            dataList.add(data);
-        }
-        if (CollectionUtils.isNotEmpty(dataList) && dataList.size() == 1) {
-            Object o = dataList.get(0);
-            if (o instanceof BaseMeta) {
-                BaseMeta meta = (BaseMeta) o;
-                RunStyle emptyElement = meta.getEmptyElement();
-                if (emptyElement != null) {
-                    String runText = emptyElement.getRunText();
-                    dataList.clear();
-                    if (StringUtils.isBlank(runText) && StringUtils.isNotBlank(defVal)) {
-                        emptyElement.setRunText(defVal);
-                    }
-                    defVal = emptyElement.toString();
-                }
-            }
-        }
+        Other other = new Other(renderMeta, defVal).invoke();
+        defVal = other.getDefVal();
+        List dataList = other.getDataList();
 
         XWPFTemplate xwpfTemplate = renderMeta.getXwpfTemplate();
         XWPFRun placeholderRun = renderMeta.getRun();
@@ -81,7 +99,7 @@ public class GroupRender implements BaseRender {
         IBody body = startParagraph.getBody();
         List<XWPFParagraph> paragraphs = body.getParagraphs();
         int startIndex = paragraphs.indexOf(startParagraph);
-        XWPFParagraph lastParagraph = null;
+        XWPFParagraph lastParagraph;
         int lastIndex = startIndex;
         for (int i = startIndex; i < paragraphs.size(); i++) {
             XWPFParagraph tmpParagraph = paragraphs.get(i);
@@ -158,9 +176,7 @@ public class GroupRender implements BaseRender {
             return;
 
         }
-        for (int i = 0; i < dataList.size(); i++) {
-            Object rowData = dataList.get(i);
-
+        for (Object rowData : dataList) {
             //先复制完所需要段落
             List<XWPFParagraph> copyParagraphList = Lists.newArrayList();
             for (int j = 0; j < lastIndex - startIndex + 1; j++) {
@@ -170,47 +186,10 @@ public class GroupRender implements BaseRender {
                 copyParagraphList.add(tmpParagraph);
             }
 
-            allRenderAnno.forEach(x -> {
-                Render right = x.getRight();
-                XWPFRun renderEffectRun = RenderUtils.findRenderEffectRun(right, copyParagraphList, gramerPattern);
-                if (renderEffectRun == null) {
-                    return;
-                }
-                List<XWPFParagraph> renderEffectParagraph = RenderUtils.findRenderEffectParagraph(right, copyParagraphList, gramerPattern);
-                RenderMeta anchorRenderMeta = new RenderMeta();
-                anchorRenderMeta.setTemplatePattern(templatePattern);
-                anchorRenderMeta.setGramerPattern(gramerPattern);
-                anchorRenderMeta.setRender(x.getRight());
-                anchorRenderMeta.setXwpfTemplate(xwpfTemplate);
-                anchorRenderMeta.setConfig(renderMeta.getConfig());
-                //String tag = gramerPattern.matcher(renderEffectRun.getText(0)).replaceAll("").trim();
-                //DefaultRunTemplateFactory defaultRunTemplateFactory = new DefaultRunTemplateFactory(renderMeta.getConfig());
-                //RunTemplate anchorRunTemplate = defaultRunTemplateFactory.createRunTemplate(tag, renderEffectRun);
-                //anchorRenderMeta.setRunTemplate(anchorRunTemplate);
-                anchorRenderMeta.setRun(anchorRenderMeta.getRun());
-                try {
-                    Field anchorfield = x.getLeft();
-                    anchorfield.setAccessible(true);
-                    anchorRenderMeta.setData(anchorfield.get(rowData));
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                    logger.error("error", e);
-                }
-                if (right.value() != RenderHandler.FILED) {
-                    copyParagraphList.removeAll(renderEffectParagraph);
-                }
-                RenderHandler.handle(anchorRenderMeta);
-
-            });
+            renderMetaValue(renderMeta, templatePattern, gramerPattern, xwpfTemplate, allRenderAnno, rowData, copyParagraphList);
 
             //未使用render的段落
-            for (XWPFParagraph copyParagraph : copyParagraphList) {
-                List<XWPFRun> copyRuns = copyParagraph.getRuns();
-                List<XWPFRun> runs = new ArrayList<>(copyRuns);
-                for (XWPFRun x : runs) {
-                    RenderUtils.handlePlaceholder(x, rowData, templatePattern, gramerPattern);
-                }
-            }
+            readerRun(templatePattern, gramerPattern, rowData, copyParagraphList);
         }
 
         //删除多余的段落
@@ -224,6 +203,52 @@ public class GroupRender implements BaseRender {
                 int posOfParagraph = document.getPosOfParagraph(paragraphs.get(j));
                 document.removeBodyElement(posOfParagraph);
             }
+        }
+    }
+
+    private class Other {
+        private RenderMeta renderMeta;
+        private String defVal;
+        private List dataList;
+
+        public Other(RenderMeta renderMeta, String defVal) {
+            this.renderMeta = renderMeta;
+            this.defVal = defVal;
+        }
+
+        public String getDefVal() {
+            return defVal;
+        }
+
+        public List getDataList() {
+            return dataList;
+        }
+
+        public Other invoke() {
+            Object data = renderMeta.getData();
+            dataList = Lists.newArrayList();
+
+            if (data instanceof List) {
+                dataList = (List) data;
+            } else if (data != null) {
+                dataList.add(data);
+            }
+            if (CollectionUtils.isNotEmpty(dataList) && dataList.size() == 1) {
+                Object o = dataList.get(0);
+                if (o instanceof BaseMeta) {
+                    BaseMeta meta = (BaseMeta) o;
+                    RunStyle emptyElement = meta.getEmptyElement();
+                    if (emptyElement != null) {
+                        String runText = emptyElement.getRunText();
+                        dataList.clear();
+                        if (StringUtils.isBlank(runText) && StringUtils.isNotBlank(defVal)) {
+                            emptyElement.setRunText(defVal);
+                        }
+                        defVal = emptyElement.toString();
+                    }
+                }
+            }
+            return this;
         }
     }
 }

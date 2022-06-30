@@ -1,19 +1,19 @@
 package com.jump.utils.report.render;
 
-import com.deepoove.poi.resolver.DefaultRunTemplateFactory;
+import com.deepoove.poi.XWPFTemplate;
+import com.google.common.collect.Lists;
 import com.jump.utils.report.RenderUtils;
 import com.jump.utils.report.anno.Render;
 import com.jump.utils.report.base.BaseRender;
-import com.jump.utils.report.handler.RenderHandler;
 import com.jump.utils.report.meta.RenderMeta;
-import com.deepoove.poi.XWPFTemplate;
-import com.deepoove.poi.template.run.RunTemplate;
-import com.google.common.collect.Lists;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.poi.xwpf.usermodel.*;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STMerge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +47,7 @@ public class TableRender implements BaseRender {
         }
         int dataSize = dataList.size();
         XWPFTemplate xwpfTemplate = renderMeta.getXwpfTemplate();
-        XWPFTable xwpfTable = RenderUtils.getxwpftable(xwpfTemplate, renderMeta.getRun());
+        XWPFTable xwpfTable = RenderUtils.getxwpfTable(xwpfTemplate, renderMeta.getRun());
         XWPFTableRow placeholderRow = RenderUtils.getxwpftablerow(xwpfTemplate, renderMeta.getRun());
         List<XWPFTableRow> tableRows = xwpfTable.getRows();
         int placeholderIndex = tableRows.indexOf(placeholderRow);
@@ -87,47 +87,10 @@ public class TableRender implements BaseRender {
             for (XWPFTableCell tableCell : tableCells) {
                 List<XWPFParagraph> cellParagraphs = tableCell.getParagraphs();
                 ArrayList<XWPFParagraph> paragraphs = new ArrayList<>(cellParagraphs);
-                allRenderAnno.forEach(x -> {
-                    Render right = x.getRight();
-                    XWPFRun renderEffectRun = RenderUtils.findRenderEffectRun(right, paragraphs, gramerPattern);
-                    if (renderEffectRun == null) {
-                        return;
-                    }
-                    List<XWPFParagraph> renderEffectParagraph = RenderUtils.findRenderEffectParagraph(right, paragraphs, gramerPattern);
-                    RenderMeta anchorRenderMeta = new RenderMeta();
-                    anchorRenderMeta.setTemplatePattern(templatePattern);
-                    anchorRenderMeta.setGramerPattern(gramerPattern);
-                    anchorRenderMeta.setRender(x.getRight());
-                    anchorRenderMeta.setXwpfTemplate(xwpfTemplate);
-                    anchorRenderMeta.setConfig(renderMeta.getConfig());
-                    //String tag = gramerPattern.matcher(renderEffectRun.getText(0)).replaceAll("").trim();
-                    //DefaultRunTemplateFactory defaultRunTemplateFactory = new DefaultRunTemplateFactory(renderMeta.getConfig());
-                    //RunTemplate anchorRunTemplate = defaultRunTemplateFactory.createRunTemplate(tag, renderEffectRun);
-                    //anchorRenderMeta.setRunTemplate(anchorRunTemplate);
-                    anchorRenderMeta.setRun(anchorRenderMeta.getRun());
-                    try {
-                        Field anchorfield = x.getLeft();
-                        anchorfield.setAccessible(true);
-                        anchorRenderMeta.setData(anchorfield.get(rowData));
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                        logger.error("error", e);
-                    }
-                    if (right.value() != RenderHandler.FILED) {
-                        paragraphs.removeAll(renderEffectParagraph);
-                    }
-                    RenderHandler.handle(anchorRenderMeta);
-
-                });
+                GroupRender.renderMetaValue(renderMeta, templatePattern, gramerPattern, xwpfTemplate, allRenderAnno, rowData, paragraphs);
 
                 //未使用render的段落
-                for (XWPFParagraph copyParagraph : paragraphs) {
-                    List<XWPFRun> copyRuns = copyParagraph.getRuns();
-                    List<XWPFRun> runs = new ArrayList<>(copyRuns);
-                    for (XWPFRun x : runs) {
-                        RenderUtils.handlePlaceholder(x, rowData, templatePattern, gramerPattern);
-                    }
-                }
+                GroupRender.readerRun(templatePattern, gramerPattern, rowData, paragraphs);
             }
 
             //跨行单元格合并

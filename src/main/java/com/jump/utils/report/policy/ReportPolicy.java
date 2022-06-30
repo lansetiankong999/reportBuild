@@ -1,21 +1,17 @@
 package com.jump.utils.report.policy;
 
-import com.deepoove.poi.resolver.Resolver;
-import com.deepoove.poi.resolver.TemplateResolver;
-import com.jump.utils.report.RenderUtils;
-import com.jump.utils.report.anno.Render;
-import com.jump.utils.report.handler.RenderHandler;
-import com.jump.utils.report.meta.RenderMeta;
 import com.deepoove.poi.XWPFTemplate;
 import com.deepoove.poi.exception.RenderException;
 import com.deepoove.poi.policy.AbstractRenderPolicy;
 import com.deepoove.poi.render.RenderContext;
+import com.deepoove.poi.resolver.TemplateResolver;
 import com.deepoove.poi.template.ElementTemplate;
-import com.deepoove.poi.template.run.RunTemplate;
+import com.jump.utils.report.RenderUtils;
+import com.jump.utils.report.anno.Render;
+import com.jump.utils.report.handler.RenderHandler;
+import com.jump.utils.report.meta.RenderMeta;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 
-import java.lang.reflect.Field;
-import java.util.regex.Pattern;
 
 /**
  * @author Jump
@@ -37,7 +33,6 @@ public class ReportPolicy<T> extends AbstractRenderPolicy<T> {
 
     @Override
     public void render(ElementTemplate eleTemplate, Object data, XWPFTemplate template) {
-        RunTemplate runTemplate = (RunTemplate) eleTemplate;
 
         // type safe
         T model;
@@ -48,7 +43,7 @@ public class ReportPolicy<T> extends AbstractRenderPolicy<T> {
         }
 
         // validate
-        RenderContext context = new RenderContext(eleTemplate, data, template);
+        RenderContext<T> context = new RenderContext<T>(eleTemplate, model, template);
         if (!validate(model)) {
             postValidError(context);
             return;
@@ -65,7 +60,7 @@ public class ReportPolicy<T> extends AbstractRenderPolicy<T> {
     }
 
     @Override
-    public void doRender(RenderContext renderContext) throws Exception {
+    public void doRender(RenderContext renderContext) {
         renderMeta.setRun(renderContext.getRun());
         renderMeta.setXwpfTemplate(renderContext.getTemplate());
         renderMeta.setConfig(renderContext.getConfig());

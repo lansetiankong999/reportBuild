@@ -19,4 +19,7 @@ public class ReportInfo extends BasePaddingPlaceholder {
      */
     @Render(value = RenderHandler.FILED, anchor = "sampleNo")
     private String sampleNo;
+
+    @Render(value = RenderHandler.IMAGE, anchor = "readsUrl")
+    private String readsUrl;
 }

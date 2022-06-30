@@ -1,31 +1,30 @@
 package com.jump.utils.report;
 
-import com.deepoove.poi.resolver.TemplateResolver;
+import com.deepoove.poi.XWPFTemplate;
+import com.deepoove.poi.util.StyleUtils;
 import com.deepoove.poi.xwpf.NiceXWPFDocument;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jump.common.CommonUtils;
 import com.jump.utils.EntityFormatter;
 import com.jump.utils.report.anno.Render;
+import com.jump.utils.report.base.DocumentPicEnum;
 import com.jump.utils.report.handler.RenderHandler;
-import com.jump.utils.report.meta.RenderMeta;
 import com.jump.utils.report.style.RunStyle;
-import com.deepoove.poi.XWPFTemplate;
-import com.deepoove.poi.config.Configure;
-import com.deepoove.poi.util.StyleUtils;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.xwpf.usermodel.*;
 import org.apache.xmlbeans.XmlCursor;
 import org.apache.xmlbeans.XmlObject;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,13 +34,14 @@ import static org.apache.poi.xwpf.usermodel.BodyType.TABLECELL;
  * @author Jump
  * @date 2020/3/9 10:42
  */
+@Slf4j
 public class RenderUtils {
 
     public static final int EMU = 9525;
 
     private static final int INT_RESTART = 2;
 
-    private static final Logger logger = LoggerFactory.getLogger(RenderUtils.class);
+    private static final String TEMP_SPAN_END = "</span>";
 
     private static void copyRun(XWPFRun target, XWPFRun source) {
         StyleUtils.styleRun(target, source);
@@ -50,47 +50,22 @@ public class RenderUtils {
         target.setText(source.text());
     }
 
-    public static void initRenderMeta(RenderMeta renderMeta) {
-        XWPFTemplate xwpfTemplate = renderMeta.getXwpfTemplate();
-        //反射取得语法匹配表达式
-        Pattern templatePattern;
-        Pattern gramerPattern;
-        try {
-            Field visitor = xwpfTemplate.getClass().getDeclaredField("visitor");
-            visitor.setAccessible(true);
-            TemplateResolver templateResolver = (TemplateResolver) visitor.get(xwpfTemplate);
-            Field configField = templateResolver.getClass().getDeclaredField("config");
-            Field templatePatternField = templateResolver.getClass().getDeclaredField("templatePattern");
-            Field gramerPatternField = templateResolver.getClass().getDeclaredField("gramerPattern");
-            configField.setAccessible(true);
-            //Configure configure = (Configure) configField.get(templateResolver);
-            templatePatternField.setAccessible(true);
-            templatePattern = (Pattern) templatePatternField.get(templateResolver);
-            gramerPatternField.setAccessible(true);
-            gramerPattern = (Pattern) gramerPatternField.get(templateResolver);
-            renderMeta.setTemplatePattern(templatePattern);
-            renderMeta.setGramerPattern(gramerPattern);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public static void handlePlaceholder(XWPFRun run, Object data, Pattern templatePattern, Pattern gramerPattern) {
         if (data == null) {
-            data = "";
+            data = StringUtils.EMPTY;
         }
         String text = run.getText(0);
         Matcher matcher = templatePattern.matcher(text);
         if (matcher.matches()) {
             if (CommonUtils.isPrimitive(data)) {
                 run.setText(data.toString(), 0);
-                if (data.toString().contains("</span>")) {
+                if (data.toString().contains(TEMP_SPAN_END)) {
                     renderTagRun(run);
                 }
                 return;
             }
-            run.setText("", 0);
-            String placeholder = gramerPattern.matcher(text).replaceAll("").trim();
+            run.setText(StringUtils.EMPTY, 0);
+            String placeholder = gramerPattern.matcher(text).replaceAll(StringUtils.EMPTY).trim();
             Class<?> dataClass = data.getClass();
             try {
                 Field placeholderField = dataClass.getDeclaredField(placeholder);
@@ -102,7 +77,7 @@ public class RenderUtils {
                     if (placeholderValue != null) {
                         String runText = placeholderValue.toString();
                         run.setText(runText, 0);
-                        if (runText.contains("</span>")) {
+                        if (runText.contains(TEMP_SPAN_END)) {
                             renderTagRun(run);
                         }
                     }
@@ -110,7 +85,7 @@ public class RenderUtils {
                 }
             } catch (NoSuchFieldException | IllegalAccessException e) {
                 //找不到类
-                logger.warn("render: " + e.getMessage() + "找不到，类名：" + dataClass.getName());
+                log.warn("render: " + e.getMessage() + "找不到，类名：" + dataClass.getName());
             }
         }
 
@@ -153,7 +128,7 @@ public class RenderUtils {
             }
         }
         //先置空
-        run.setText("", 0);
+        run.setText(StringUtils.EMPTY, 0);
         for (int i = runStyleList.size() - 1; i > -1; i--) {
             RunStyle runStyle = runStyleList.get(i);
             XWPFRun xwpfRun = parentParagraph.insertNewRun(index);
@@ -201,7 +176,7 @@ public class RenderUtils {
         }
         XWPFRun xwpfRun = runs.get(0);
         xwpfRun.setText(defVal, 0);
-        if (StringUtils.isNotBlank(defVal) && defVal.contains("</span>")) {
+        if (StringUtils.isNotBlank(defVal) && defVal.contains(TEMP_SPAN_END)) {
             RenderUtils.renderTagRun(xwpfRun);
         }
     }
@@ -236,7 +211,7 @@ public class RenderUtils {
         for (XWPFParagraph paragraph : paragraphList) {
             List<XWPFRun> runs = paragraph.getRuns();
             for (XWPFRun run : runs) {
-                String placeholder = gramerPattern.matcher(run.getText(0)).replaceAll("").trim();
+                String placeholder = gramerPattern.matcher(run.getText(0)).replaceAll(StringUtils.EMPTY).trim();
                 if (anchorSet.contains(placeholder)) {
                     return run;
                 }
@@ -262,7 +237,7 @@ public class RenderUtils {
             for (XWPFParagraph paragraph : paragraphList) {
                 List<XWPFRun> runs = paragraph.getRuns();
                 for (XWPFRun run : runs) {
-                    String placeholder = gramerPattern.matcher(run.getText(0)).replaceAll("").trim();
+                    String placeholder = gramerPattern.matcher(run.getText(0)).replaceAll(StringUtils.EMPTY).trim();
                     if (anchorSet.contains(placeholder)) {
                         retList.add(paragraph);
                         break paragraphLoop;
@@ -277,7 +252,7 @@ public class RenderUtils {
                 XWPFParagraph paragraph = paragraphList.get(i);
                 List<XWPFRun> runs = paragraph.getRuns();
                 for (XWPFRun run : runs) {
-                    String placeholder = gramerPattern.matcher(run.getText(0)).replaceAll("").trim();
+                    String placeholder = gramerPattern.matcher(run.getText(0)).replaceAll(StringUtils.EMPTY).trim();
                     if (anchorSet.contains(placeholder)) {
                         startIndex = i;
                     }
@@ -295,38 +270,16 @@ public class RenderUtils {
     }
 
     public static int suggestFileType(String imgFile) {
-        int format = 0;
-
-        if (imgFile.endsWith(".emf")) {
-            format = XWPFDocument.PICTURE_TYPE_EMF;
-        } else if (imgFile.endsWith(".wmf")) {
-            format = XWPFDocument.PICTURE_TYPE_WMF;
-        } else if (imgFile.endsWith(".pict")) {
-            format = XWPFDocument.PICTURE_TYPE_PICT;
-        } else if (imgFile.endsWith(".jpeg") || imgFile.endsWith(".jpg")) {
-            format = XWPFDocument.PICTURE_TYPE_JPEG;
-        } else if (imgFile.endsWith(".png")) {
-            format = XWPFDocument.PICTURE_TYPE_PNG;
-        } else if (imgFile.endsWith(".dib")) {
-            format = XWPFDocument.PICTURE_TYPE_DIB;
-        } else if (imgFile.endsWith(".gif")) {
-            format = XWPFDocument.PICTURE_TYPE_GIF;
-        } else if (imgFile.endsWith(".tiff")) {
-            format = XWPFDocument.PICTURE_TYPE_TIFF;
-        } else if (imgFile.endsWith(".eps")) {
-            format = XWPFDocument.PICTURE_TYPE_EPS;
-        } else if (imgFile.endsWith(".bmp")) {
-            format = XWPFDocument.PICTURE_TYPE_BMP;
-        } else if (imgFile.endsWith(".wpg")) {
-            format = XWPFDocument.PICTURE_TYPE_WPG;
-        } else {
-            logger.error("Unsupported picture: " + imgFile
-                    + ". Expected emf|wmf|pict|jpeg|png|dib|gif|tiff|eps|bmp|wpg");
+        String[] imgFileSplit = imgFile.split("\\.");
+        DocumentPicEnum documentPicEnum = DocumentPicEnum.find(imgFileSplit[imgFileSplit.length - 1]);
+        if (ObjectUtils.isEmpty(documentPicEnum)) {
+            log.error("Unsupported picture: " + imgFile + ". Expected emf|wmf|pict|jpg|jpeg|png|dib|gif|tiff|eps|bmp|wpg");
+            return 0;
         }
-        return format;
+        return documentPicEnum.getPictureType();
     }
 
-    public static XWPFTable getxwpftable(XWPFTemplate xwpfTemplate, XWPFRun run) {
+    public static XWPFTable getxwpfTable(XWPFTemplate xwpfTemplate, XWPFRun run) {
         NiceXWPFDocument doc = xwpfTemplate.getXWPFDocument();
         // w:tbl-w:tr-w:tc-w:p-w:tr
         XmlCursor newCursor = ((XWPFParagraph) run.getParent()).getCTP().newCursor();
@@ -364,9 +317,7 @@ public class RenderUtils {
     }
 
     public static void removeTableCol(XWPFTable table, Integer index) {
-        table.getRows().forEach(x -> {
-            x.removeCell(index);
-        });
+        table.getRows().forEach(x -> x.removeCell(index));
     }
 
     private static void restTableCell(XWPFTableCell tableCell, String defVal) {
@@ -381,8 +332,9 @@ public class RenderUtils {
     public static int getTargetColIndex(XWPFTable table, XWPFTableCell source) {
         List<XWPFTableRow> rows = table.getRows();
         Optional<XWPFTableRow> first = rows.stream().filter(x -> x.getTableCells().contains(source)).findFirst();
-        XWPFTableRow xwpfTableRow = first.get();
-        return xwpfTableRow.getTableCells().indexOf(source);
+        AtomicInteger index = new AtomicInteger();
+        first.ifPresent(row -> index.set(row.getTableCells().indexOf(source)));
+        return index.get();
     }
 
 
@@ -420,11 +372,11 @@ public class RenderUtils {
         CTTcPr targetTcPr = target.getCTTc().getTcPr();
         if (sourceTcPr != null && targetTcPr != null) {
             CTVMerge merge = targetTcPr.getVMerge();
-            CTVMerge sourceTcPrVMerge = sourceTcPr.getVMerge();
-            if (sourceTcPrVMerge != null && merge != null) {
-                STMerge.Enum targetVMergeVal = merge.getVal();
+            CTVMerge sourceTcPrMerge = sourceTcPr.getVMerge();
+            if (sourceTcPrMerge != null && merge != null) {
+                STMerge.Enum targetMergeVal = merge.getVal();
                 //目标单元格为行合并单元格的起始单元格时不做处理
-                if (targetVMergeVal.intValue() == INT_RESTART) {
+                if (targetMergeVal.intValue() == INT_RESTART) {
                     return;
                 }
             }

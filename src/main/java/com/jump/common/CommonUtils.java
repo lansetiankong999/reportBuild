@@ -37,7 +37,7 @@ public class CommonUtils {
 
     public static List<Integer> numberCompose(int number) {
         if (number < 0) {
-            throw new RuntimeException("非法参数");
+            throw new IllegalArgumentException("非法参数");
         }
         int base = 2;
         List<Integer> ret = Lists.newArrayList();

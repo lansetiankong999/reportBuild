@@ -62,7 +62,7 @@ public class RenderHandler {
                 new VerticalTableRender().execute(renderMeta);
                 break;
             default:
-                return;
+                break;
         }
 
 

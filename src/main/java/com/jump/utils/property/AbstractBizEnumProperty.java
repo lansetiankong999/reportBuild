@@ -3,8 +3,8 @@ package com.jump.utils.property;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.compress.utils.IOUtils;
-import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -36,7 +36,7 @@ public abstract class AbstractBizEnumProperty implements BeanFactoryPostProcesso
      *
      * @return Map
      */
-    abstract Map<String, Map> getPropertiesMap();
+    abstract Map<String, Map<String, Object>> getPropertiesMap();
 
     /**
      * 获取属性
@@ -47,12 +47,12 @@ public abstract class AbstractBizEnumProperty implements BeanFactoryPostProcesso
 
 
     @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory configurableListableBeanFactory) throws BeansException {
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory config) throws BeansException {
         this.loadProps();
     }
 
     private void loadProps() {
-        Map<String, Map> propertyMap = getPropertiesMap();
+        Map<String, Map<String, Object>> propertyMap = getPropertiesMap();
         Map<String, List<Map<String, String>>> propertiesList = getPropertiesList();
         propertyMap.clear();
         propertiesList.clear();
@@ -86,12 +86,12 @@ public abstract class AbstractBizEnumProperty implements BeanFactoryPostProcesso
                             enumKey = key.substring(lastIndex + 1);
                         }
 
-                        Map properties = propertyMap.computeIfAbsent(mapKey, k -> Maps.newLinkedHashMap());
+                        Map<String, Object> properties = propertyMap.computeIfAbsent(mapKey, k -> Maps.newLinkedHashMap());
                         properties.put(enumKey, value);
 
                         List<Map<String, String>> list = propertiesList.computeIfAbsent(mapKey, k -> Lists.newArrayList());
 
-                        Map itemMap = Maps.newHashMap();
+                        Map<String, String> itemMap = Maps.newHashMap();
                         itemMap.put("key", enumKey);
                         itemMap.put("value", value);
                         list.add(itemMap);
@@ -112,9 +112,9 @@ public abstract class AbstractBizEnumProperty implements BeanFactoryPostProcesso
      * @param key key
      * @return Map
      */
-    Map getBizPropertys(String key) {
-        Map<String, Map> propertyMap = getPropertiesMap();
-        Map properties = propertyMap.get(key);
+    Map<String, Object> getBizProperty(String key) {
+        Map<String, Map<String, Object>> propertyMap = getPropertiesMap();
+        Map<String, Object> properties = propertyMap.get(key);
         if (properties == null) {
             return Maps.newLinkedHashMap();
         }

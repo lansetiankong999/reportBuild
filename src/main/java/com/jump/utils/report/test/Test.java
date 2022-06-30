@@ -15,8 +15,9 @@ public class Test {
         try {
             ReportInfo reportInfo = new ReportInfo();
             reportInfo.setSampleNo("19B88889734");
-            String templatePath = System.getProperty("user.dir") + File.separator + "src/static/template" + File.separator + "DX-SDP-B92 V1.0 血友希望专项倒位阳性报告模板.docx";
-            ReportBuilder.build(reportInfo, templatePath, "D:\\aaa\\test.docx");
+            reportInfo.setReadsUrl("E:\\aaa\\test.jpg");
+            String templatePath = System.getProperty("user.dir") + File.separator + "src/static/template" + File.separator + "doc模板.docx";
+            ReportBuilder.build(reportInfo, templatePath, "E:\\aaa\\test.docx");
         } catch (IOException e) {
             e.printStackTrace();
         }
