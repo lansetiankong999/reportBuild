@@ -23,7 +23,7 @@
         <poi.ooxl.schemas.version>4.1.2</poi.ooxl.schemas.version>
         <jsoup.version>1.14.3</jsoup.version>
         <commons.beanutils.version>1.9.4</commons.beanutils.version>
-        <commons.text.version>1.9</commons.text.version>
+        <commons.text.version>1.10.0</commons.text.version>
     </properties>
 
     <dependencies>
